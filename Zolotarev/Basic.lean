@@ -49,12 +49,11 @@ lemma fin_order_a : IsOfFinOrder a := by
   use p - 1
   simp_all only [gt_iff_lt, tsub_pos_iff_lt, mul_left_iterate, mul_one]
   exact ⟨Nat.Prime.one_lt Fact.out,
-    by rw [<- units_order_totient] ; exact pow_card_eq_one⟩
+    by rw [← units_order_totient] ; exact pow_card_eq_one⟩
 lemma support_eq_univ (ha : a ≠ 1) :
   (toPerm a).support = @Finset.univ (ZMod p)ˣ inferInstance := by
     ext _
-    simpa only [mem_support, perm_apply_eq_mul, ne_eq, mul_eq_right,
-      Finset.mem_univ, iff_true] using ha
+    simpa using ha
 lemma sign_eq_neg_pow_card (ha : a ≠ 1) :
   sign (toPerm a : Perm (ZMod p)ˣ) =
   (-1) ^ (toPerm a : Perm (ZMod p)ˣ).cycleType.card := by
@@ -101,7 +100,7 @@ lemma cycle_len_eq_orderOf_a (x : (ZMod p)ˣ) (ha : a ≠ 1) :
             exact this
       induction n
       case zero =>
-        exact Exists.intro 0 (show x = a ^ 0 * x by simp only [pow_zero, one_mul])
+        exact Exists.intro 0 (show x = a ^ 0 * x by simp)
       case succ k ih =>
         exact SameCycle.trans ih (this x k)
     let Φ (x : (ZMod p)ˣ) : (zpowers a) → {y | (toPerm a).SameCycle x y} :=
@@ -120,7 +119,7 @@ lemma cycle_len_eq_orderOf_a (x : (ZMod p)ˣ) (ha : a ≠ 1) :
         have (n : ℕ) : (toPerm (a ^ n)) = (toPerm a : Perm (ZMod p)ˣ) ^ n := by
           simpa using (toPermHom (ZMod p)ˣ (ZMod p)ˣ).map_pow a n
         choose n hn using (SameCycle.exists_nat_pow_eq hb)
-        rw [<- this, perm_apply_eq_mul] at *
+        rw [← this, perm_apply_eq_mul] at *
         use ⟨(a ^ n), by simp_all only [npow_mem_zpowers]⟩
         subst hn
         simp_all only [ne_eq, mem_support, card_subtype_compl,
@@ -128,8 +127,8 @@ lemma cycle_len_eq_orderOf_a (x : (ZMod p)ˣ) (ha : a ≠ 1) :
     have :
       Fintype.card ((toPerm a).cycleOf x).support =
       ((toPerm a).cycleOf x).support.card := by
-        rw [<- Finset.card_univ, Finset.univ_eq_attach, Finset.card_attach]
-    rw [<- card_zpowers, <- this, <- h]
+        rw [← Finset.card_univ, Finset.univ_eq_attach, Finset.card_attach]
+    rw [← card_zpowers, ← this, ← h]
     exact (@card_of_bijective (zpowers a) {y | (toPerm a).SameCycle x y}
       (by infer_instance) (by infer_instance) (Φ x) (Φ_bijective x))
 lemma card_of_toPerm_cycleType (ha : a ≠ 1) :
@@ -174,7 +173,7 @@ lemma neg_one_pow_half_even_order :
         have : 0 < orderOf a := IsOfFinOrder.orderOf_pos fin_order_a
         simp_all only [ne_eq, even_two, Even.mul_right,
           OfNat.ofNat_ne_zero, not_false_eq_true, mul_div_cancel_left₀]
-        nth_rw 2 [<- show 1 * k = k from one_mul k]
+        nth_rw 2 [← show 1 * k = k from one_mul k]
         rw [Nat.mul_div_mul_comm] <;> simp_all
       have h2 : orderOf (a ^ ((orderOf a)/2)) = 2 := by
         rw [orderOf_pow_of_dvd (by grind)
@@ -205,7 +204,7 @@ lemma neg_one_pow_half_even_order :
       (a ^ ((orderOf a)/2)) ^ ((p - 1)/(orderOf a)) =
       a ^ ((p - 1)/2) := by
         have hp : orderOf a ∣ p - 1 := by
-          rw [<- units_order_totient]
+          rw [← units_order_totient]
           exact orderOf_dvd_card
         calc
           (a ^ ((orderOf a)/2)) ^ ((p - 1)/(orderOf a)) =
@@ -215,14 +214,14 @@ lemma neg_one_pow_half_even_order :
           _ = a ^ ((p - 1)/2) := by
             rw [mul_comm 2, Nat.mul_div_mul_left]
             simpa [orderOf_pos_iff] using fin_order_a
-    rw [<- this, h']
+    rw [← this, h']
 lemma pow_of_pow_of_odd_order :
   Odd (orderOf a) →
   (a ^ (orderOf a)) ^ ((p - 1)/(2 * orderOf a)) = a ^ ((p - 1)/2) := by
     intro h
     set m := (orderOf a : ℕ) with hm
     have hp : m ∣ p - 1 := by
-      rw [<- units_order_totient]
+      rw [← units_order_totient]
       exact orderOf_dvd_card
     have h2 : 2 ∣ p - 1 :=
       even_iff_two_dvd.mp (Nat.Odd.sub_odd Fact.out odd_one)
@@ -239,7 +238,7 @@ lemma pow_of_pow_of_odd_order :
       _ = a ^ (m * (p - 1)/(1 * (2 * m))) := by
         rw [Nat.mul_div_mul_comm (one_dvd m)
           (Nat.Coprime.mul_dvd_of_dvd_of_dvd hgcd h2 hp)]
-        simp only [Nat.div_one]
+        simp
       _ = a ^ ((m * (p - 1))/(m * 2)) := by rw [one_mul, mul_comm 2]
       _ = a ^ ((p - 1)/2) := by
         rw [Nat.mul_div_mul_comm, Nat.div_self, one_mul]
@@ -255,7 +254,7 @@ lemma legendreSym_eq_sign_of_toPerm :
           ext x
           subst ha
           rw [toPerm_apply]
-          simp only [one_smul, Perm.coe_one, id_eq]
+          simp
         simp only [this, Perm.sign_one]
       subst ha
       simp only [Units.val_one, ZMod.val_one, Nat.cast_one,
@@ -302,22 +301,22 @@ lemma legendreSym_eq_sign_of_toPerm :
               rw [even_iff_two_dvd] at *
               choose k hk using
                 (show orderOf a ∣ p - 1 by
-                  rw [<- units_order_totient]
+                  rw [← units_order_totient]
                   exact orderOf_dvd_card)
               rw [Nat.div_eq_of_eq_mul_right
                 (IsOfFinOrder.orderOf_pos fin_order_a) (by rw [hk])]
               rcases (Nat.prime_two).dvd_mul.mp
-                (by rw [<- hk] ; exact this) with (h2o | h2k)
+                (by rw [← hk] ; exact this) with (h2o | h2k)
               case inl => exact absurd h2o (Odd.not_two_dvd_nat h)
               case inr => exact h2k
             fun h =>
               sign_eq_neg_pow_card ha ▸
               card_of_toPerm_cycleType ha ▸
               Even.neg_one_pow (this h)
-        rw [<- eq_floor_div] at h1
+        rw [← eq_floor_div] at h1
         rw [h1]
         norm_num
-        rw [h2, <- Units.val_pow_eq_pow_val, pow_orderOf_eq_one]
+        rw [h2, ← Units.val_pow_eq_pow_val, pow_orderOf_eq_one]
         simp only [Units.val_one, one_pow]
         rw [odd_order_even_perm ha h]
         exact_mod_cast rfl

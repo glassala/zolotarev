@@ -84,16 +84,11 @@ lemma card_support_eq_support_card (x : (ZMod p)ˣ) :
   Fintype.card ((toPerm a).cycleOf x).support =
   ((toPerm a).cycleOf x).support.card := by
     rw [← Finset.card_univ, Finset.univ_eq_attach, Finset.card_attach]
-
-lemma orderOf_eq_support_card (x : (ZMod p)ˣ) (ha : a ≠ 1) :
+lemma order_eq_support_card (x : (ZMod p)ˣ) (ha : a ≠ 1) :
   orderOf a = ((toPerm a).cycleOf x).support.card := by
-    have :
-      card {y | (toPerm a).SameCycle x y} =
-      card ((toPerm a).cycleOf x).support := by
-        rw [cycle_support_eq_cycle_finset x ha, Set.toFinset_setOf]
-        simp
-        rfl
-    rw [← card_zpowers, ← card_support_eq_support_card, ← this]
+    rw [← card_zpowers, ← card_support_eq_support_card,
+      cycle_support_eq_cycle_finset x ha, Set.toFinset_setOf]
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
     let Φ (x : (ZMod p)ˣ) : (zpowers a) → {y | (toPerm a).SameCycle x y} :=
       fun ⟨b, hb⟩ => ⟨b * x, Exists.elim
         ((IsOfFinOrder.mem_powers_iff_mem_zpowers (fin_order_a)).mpr hb)
@@ -107,43 +102,34 @@ lemma orderOf_eq_support_card (x : (ZMod p)ˣ) (ha : a ≠ 1) :
         intro ⟨_, hb⟩
         choose n hn using (SameCycle.exists_nat_pow_eq hb)
         rw [← toPerm_map_pow, perm_apply_eq_mul] at *
-        use ⟨(a ^ n), by simp_all only [npow_mem_zpowers]⟩
-        subst hn
+        use ⟨(a ^ n), by simp⟩
         simp_all [Set.mem_setOf_eq, Φ]⟩
-
+lemma cycle_support_card_eq_order (σ : Perm (ZMod p)ˣ) (ha : a ≠ 1) :
+  σ ∈ (toPerm a).cycleFactorsFinset → σ.support.card = orderOf a := by
+    intro h
+    obtain ⟨_, ⟨hxa, _⟩⟩ := (mem_cycleFactorsFinset_iff.mp h).left
+    rw [cycle_is_cycleOf (mem_support.mpr hxa) h, order_eq_support_card]
+    exact ha
 lemma card_of_toPerm_cycleType (ha : a ≠ 1) :
-  (cycleType (toPerm a : Perm (ZMod p)ˣ)).card = (p - 1)/(orderOf a) := by
-    have : (toPerm a : Perm (ZMod p)ˣ).cycleFactorsFinset.card * orderOf a = p - 1 := by
-      have (σ : Perm (ZMod p)ˣ) :
-        σ ∈ (toPerm a).cycleFactorsFinset → σ.support.card = orderOf a := by
-          intro h
-          obtain ⟨_, ⟨hxa, _⟩⟩ := (mem_cycleFactorsFinset_iff.mp h).left
-          rw [cycle_is_cycleOf (mem_support.mpr hxa) h, orderOf_eq_support_card]
-          exact ha
-      have h1 :
-        (toPerm a : Perm (ZMod p)ˣ).cycleFactorsFinset.card * orderOf a =
+  (p - 1)/(orderOf a) = (cycleType (toPerm a : Perm (ZMod p)ˣ)).card := by
+    have : orderOf a * (toPerm a : Perm (ZMod p)ˣ).cycleFactorsFinset.card  = p - 1 := by
+      calc
+        orderOf a * (toPerm a : Perm (ZMod p)ˣ).cycleFactorsFinset.card =
         (∑ σ ∈ (toPerm a : Perm (ZMod p)ˣ).cycleFactorsFinset, σ.support.card) := by
-          rw [Finset.sum_congr rfl (fun σ hσ => by rw [this σ hσ])]
-          simp_all only [ne_eq, Finset.sum_const, smul_eq_mul]
-      have h2 :
-        (∑ σ ∈ (toPerm a : Perm (ZMod p)ˣ).cycleFactorsFinset, σ.support.card) =
-        (toPerm a : Perm (ZMod p)ˣ).support.card := by apply sum_cycleType
-      have h3 : (toPerm a : Perm (ZMod p)ˣ).support.card = p - 1 :=
-        congrArg Finset.card (support_eq_univ ha) ▸
-        @Finset.card_univ (ZMod p)ˣ inferInstance ▸
-        units_order_totient
-      rw [h1, h2, h3]
-    have h :
-      (toPerm a : Perm (ZMod p)ˣ).cycleFactorsFinset.card =
-      (p - 1)/orderOf a := by
-        rw [Nat.div_eq_of_eq_mul_right (orderOf_pos a)]
-        rw [mul_comm, this]
-    have :
-      (cycleType (toPerm a : Perm (ZMod p)ˣ)).card =
-      (toPerm a : Perm (ZMod p)ˣ).cycleFactorsFinset.card := by
+          rw [Finset.sum_congr rfl (fun σ hσ => by
+            rw [cycle_support_card_eq_order σ ha hσ])]
+          simp_all only [ne_eq, Finset.sum_const, smul_eq_mul, mul_comm]
+        _ = (toPerm a : Perm (ZMod p)ˣ).support.card := by apply sum_cycleType
+        _ = p - 1 := congrArg Finset.card (support_eq_univ ha) ▸
+          @Finset.card_univ (ZMod p)ˣ inferInstance ▸
+          units_order_totient
+    calc
+      (p - 1)/orderOf a = (toPerm a : Perm (ZMod p)ˣ).cycleFactorsFinset.card := by
+        rw [← this, Nat.div_eq_of_eq_mul_right (orderOf_pos a)]
+        rfl
+      _ = (cycleType (toPerm a : Perm (ZMod p)ˣ)).card := by
         unfold cycleType
         simp_all only [Function.comp_apply, card_map, Finset.card_val]
-    rw [this, h]
 lemma neg_one_pow_half_even_order :
   Even (orderOf a) → a ^ ((p - 1)/2) = (-1) ^ ((p - 1)/(orderOf a)) := by
     intro h

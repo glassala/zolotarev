@@ -64,73 +64,53 @@ lemma sign_eq_neg_pow_card (ha : a ≠ 1) :
     rw [sign_of_cycleType, this, pow_add]
     simp only [Even.neg_pow (Nat.Odd.sub_odd Fact.out odd_one), one_pow, one_mul]
     rfl
-lemma cycle_len_eq_orderOf_a (x : (ZMod p)ˣ) (ha : a ≠ 1) :
+lemma ne_one_not_fixed (x : (ZMod p)ˣ) (ha : a ≠ 1) : (toPerm a) x ≠ x := by
+  simp_all
+lemma cycle_support_eq_cycle_finset (x : (ZMod p)ˣ) (ha : a ≠ 1) :
+  ((toPerm a).cycleOf x).support =
+  {y | (toPerm a).SameCycle x y}.toFinset := by
+    ext y
+    rw [mem_support_cycleOf_iff' (ne_one_not_fixed x ha)]
+    simp
+lemma toPerm_map_pow (n : ℕ) :
+  (toPerm (a ^ n)) = (toPerm a : Perm (ZMod p)ˣ) ^ n := by
+    simpa using (toPermHom (ZMod p)ˣ (ZMod p)ˣ).map_pow a n
+lemma sameCycle_of_pow (x : (ZMod p)ˣ) (n : ℕ) :
+  (toPerm a).SameCycle x ((a ^ n) * x) := by
+    rw [<- Units.smul_eq_mul, <- toPerm_apply, toPerm_map_pow]
+    simp
+    rfl
+lemma card_support_eq_support_card (x : (ZMod p)ˣ) :
+  Fintype.card ((toPerm a).cycleOf x).support =
+  ((toPerm a).cycleOf x).support.card := by
+    rw [← Finset.card_univ, Finset.univ_eq_attach, Finset.card_attach]
+
+lemma orderOf_eq_support_card (x : (ZMod p)ˣ) (ha : a ≠ 1) :
   orderOf a = ((toPerm a).cycleOf x).support.card := by
-    have h :
+    have :
       card {y | (toPerm a).SameCycle x y} =
       card ((toPerm a).cycleOf x).support := by
-        have (x : (ZMod p)ˣ) (ha : a ≠ 1) : (toPerm a) x ≠ x := by
-          by_contra!
-          simp_all only [ne_eq, perm_apply_eq_mul, mul_eq_right]
-        let f : {y | (toPerm a).SameCycle x y} → ((toPerm a).cycleOf x).support :=
-          fun ⟨y, hy⟩ ↦ ⟨y, by simpa [Set.mem_setOf_eq] using
-            (mem_support_cycleOf_iff' (this x ha)).mpr hy⟩
-        exact @card_of_bijective
-          {y | (toPerm a).SameCycle x y} ((toPerm a).cycleOf x).support
-          inferInstance inferInstance f
-          ⟨by intro ⟨_, _⟩ ⟨_, _⟩ ha ;
-              simp_all only [Set.coe_setOf, Set.mem_setOf_eq,
-                Subtype.mk.injEq, f], by
-              intro ⟨b', hb⟩
-              use ⟨b', ((mem_support_cycleOf_iff' (this x ha)).mp hb)⟩⟩
-    have (x : (ZMod p)ˣ) (n : ℕ) : (toPerm a).SameCycle x ((a ^ n) * x) := by
-      have (x : (ZMod p)ˣ) (n : ℕ) :
-        (toPerm a).SameCycle ((a ^ n) * x) ((a ^ (n + 1)) * x) := by
-          have (x : (ZMod p)ˣ) : (toPerm a).SameCycle x (a * x) :=
-            Exists.intro 1
-              (zpow_one (toPerm a : Perm (ZMod p)ˣ) ▸
-              perm_apply_eq_mul x)
-          induction n
-          case zero =>
-            simpa [pow_zero, one_mul, zero_add, pow_one] using (this x)
-          case succ k ih =>
-            have : (toPerm a).SameCycle (a ^ (k + 1) * x) (a * (a ^ (k + 1) * x)) :=
-              this (a ^ (k + 1) * x)
-            group at *
-            exact this
-      induction n
-      case zero =>
-        exact Exists.intro 0 (show x = a ^ 0 * x by simp)
-      case succ k ih =>
-        exact SameCycle.trans ih (this x k)
+        rw [cycle_support_eq_cycle_finset x ha, Set.toFinset_setOf]
+        simp
+        rfl
+    rw [← card_zpowers, ← card_support_eq_support_card, ← this]
     let Φ (x : (ZMod p)ˣ) : (zpowers a) → {y | (toPerm a).SameCycle x y} :=
-      fun ⟨b, hb⟩ => ⟨b * x,
-        Exists.elim
-          ((IsOfFinOrder.mem_powers_iff_mem_zpowers (fin_order_a)).mpr hb)
-          (fun m => fun hm => hm ▸ this x m)⟩
-    have Φ_bijective (x : (ZMod p)ˣ) :
-      @Function.Bijective (zpowers a) {y | (toPerm a).SameCycle x y} (Φ x) := ⟨by
+      fun ⟨b, hb⟩ => ⟨b * x, Exists.elim
+        ((IsOfFinOrder.mem_powers_iff_mem_zpowers (fin_order_a)).mpr hb)
+        (fun m => fun hm => hm ▸ sameCycle_of_pow x m)⟩
+    exact @card_of_bijective (zpowers a) {y | (toPerm a).SameCycle x y}
+      (by infer_instance) (by infer_instance) (Φ x) ⟨by
         intro _ _ hf
         unfold Φ at hf
         ext
-        simp_all only [Set.coe_setOf, Set.mem_setOf_eq, Subtype.mk.injEq,
-          mul_left_inj], by
+        simp_all, by
         intro ⟨_, hb⟩
-        have (n : ℕ) : (toPerm (a ^ n)) = (toPerm a : Perm (ZMod p)ˣ) ^ n := by
-          simpa using (toPermHom (ZMod p)ˣ (ZMod p)ˣ).map_pow a n
         choose n hn using (SameCycle.exists_nat_pow_eq hb)
-        rw [← this, perm_apply_eq_mul] at *
+        rw [← toPerm_map_pow, perm_apply_eq_mul] at *
         use ⟨(a ^ n), by simp_all only [npow_mem_zpowers]⟩
         subst hn
-        simp_all only [ne_eq, mem_support, card_subtype_compl,
-          ZMod.card_units_eq_totient, Set.mem_setOf_eq, Φ]⟩
-    have :
-      Fintype.card ((toPerm a).cycleOf x).support =
-      ((toPerm a).cycleOf x).support.card := by
-        rw [← Finset.card_univ, Finset.univ_eq_attach, Finset.card_attach]
-    rw [← card_zpowers, ← this, ← h]
-    exact (@card_of_bijective (zpowers a) {y | (toPerm a).SameCycle x y}
-      (by infer_instance) (by infer_instance) (Φ x) (Φ_bijective x))
+        simp_all [Set.mem_setOf_eq, Φ]⟩
+
 lemma card_of_toPerm_cycleType (ha : a ≠ 1) :
   (cycleType (toPerm a : Perm (ZMod p)ˣ)).card = (p - 1)/(orderOf a) := by
     have : (toPerm a : Perm (ZMod p)ˣ).cycleFactorsFinset.card * orderOf a = p - 1 := by
@@ -138,7 +118,7 @@ lemma card_of_toPerm_cycleType (ha : a ≠ 1) :
         σ ∈ (toPerm a).cycleFactorsFinset → σ.support.card = orderOf a := by
           intro h
           obtain ⟨_, ⟨hxa, _⟩⟩ := (mem_cycleFactorsFinset_iff.mp h).left
-          rw [cycle_is_cycleOf (mem_support.mpr hxa) h, cycle_len_eq_orderOf_a]
+          rw [cycle_is_cycleOf (mem_support.mpr hxa) h, orderOf_eq_support_card]
           exact ha
       have h1 :
         (toPerm a : Perm (ZMod p)ˣ).cycleFactorsFinset.card * orderOf a =
@@ -320,3 +300,64 @@ lemma legendreSym_eq_sign_of_toPerm :
         simp only [Units.val_one, one_pow]
         rw [odd_order_even_perm ha h]
         exact_mod_cast rfl
+
+
+
+/-
+
+-- Mathlib.Algebra.Group.Action.Basic
+
+theorem IsUnit.smul_bijective
+  {α : Type u_5}  {β : Type u_6}  [Monoid α]  [MulAction α β]  {m : α} (hm : IsUnit m) :
+    Function.Bijective fun (a : β) => m • a
+
+theorem IsUnit.smul_left_cancel
+  {α : Type u_5}  {β : Type u_6}  [Monoid α]  [MulAction α β]
+  {a : α} (ha : IsUnit a)  {x y : β} :
+    a • x = a • y ↔ x = y
+
+theorem smul_pow'
+  {M : Type u_2}  {A : Type u_3}  [Monoid M]  [Monoid A] [MulDistribMulAction M A]
+  (r : M)  (x : A)  (n : ℕ) :
+    r • x ^ n = (r • x) ^ n
+
+-- Mathlib.GroupTheory.GroupAction.Basic
+
+theorem MulAction.orbit_eq_univ
+  (M : Type u)  [Monoid M]  {α : Type v}  [MulAction M α] [IsPretransitive M α]  (a : α) :
+    orbit M a = Set.univ
+
+-- Mathlib.GroupTheory.GroupAction.Defs
+
+theorem MulAction.mem_orbit_iff
+  {γ : Type u_2}  {α : Type u_3}  [SMul γ α]  {a₁ a₂ : α} :
+    a₂ ∈ orbit γ a₁ ↔ ∃ (x : γ), x • a₁ = a₂
+
+theorem MulAction.mem_orbit
+  {γ : Type u_2}  {α : Type u_3}  [SMul γ α]  (a : α)  (m : γ) :
+    m • a ∈ orbit γ a
+
+theorem MulAction.mem_orbit_smul
+  {G : Type u_1}  {α : Type u_2}  [Group G]  [MulAction G α]  (g : G) (a : α) :
+    a ∈ orbit G (g • a)
+
+theorem MulAction.smul_mem_orbit_smul
+  {G : Type u_1}  {α : Type u_2}  [Group G]  [MulAction G α]  (g h : G) (a : α) :
+    g • a ∈ orbit G (h • a)
+
+theorem MulAction.orbit.coe_smul
+  {M : Type u_1}  {α : Type u_3}  [Monoid M]  [MulAction M α]
+  {a : α}  {m : M} {a' : ↑(orbit M a)} :
+    ↑(m • a') = m • ↑a'
+
+theorem MulAction.orbit_smul
+  {G : Type u_1}  {α : Type u_2}  [Group G]  [MulAction G α]  (g : G)  (a : α) :
+    orbit G (g • a) = orbit G a
+
+theorem MulAction.mem_stabilizer_iff
+  {G : Type u_1}  {α : Type u_2}  [Group G]  [MulAction G α]  {a : α}  {g : G} :
+    g ∈ stabilizer G a ↔ g • a = a
+
+
+
+-/

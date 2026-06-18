@@ -130,8 +130,6 @@ lemma totient_div_order_eq_cycleType_card (ha : a ≠ 1) :
       _ = (cycleType (toPerm a : Perm (ZMod p)ˣ)).card := by
         unfold cycleType
         simp_all only [Function.comp_apply, card_map, Finset.card_val]
-lemma mul_self_div (n k : ℕ) (hk : k ≠ 0) : n * k / k = n := by
-  simp_all
 lemma pow_half_even_order_eq_two (h : Even (orderOf a)) :
   orderOf (a ^ ((orderOf a)/2)) = 2 := by
     obtain ⟨_, _⟩ := even_iff_two_dvd.mp h
@@ -201,52 +199,43 @@ lemma legendreSym_eq_sign_of_toPerm :
   (legendreSym p a.val.val : (ZMod p)) = sign (toPerm a : Perm (ZMod p)ˣ) := by
     by_cases ha : a = 1
     case pos =>
-      have : sign (toPerm (a : (ZMod p)ˣ) : Perm (ZMod p)ˣ) = 1 := by
-        have : (toPerm a) = (1 : Perm (ZMod p)ˣ) := by
-          ext x
-          subst ha
-          rw [toPerm_apply]
-          simp
-        simp only [this, Perm.sign_one]
-      subst ha
-      simp only [Units.val_one, ZMod.val_one, Nat.cast_one,
+      have : (toPerm a) = (1 : Perm (ZMod p)ˣ) := by
+        ext
+        rw [ha, toPerm_apply]
+        simp
+      rw [this, Perm.sign_one, ha, Units.val_one, ZMod.val_one, Nat.cast_one,
         legendreSym.at_one, Int.cast_one]
-      rw [this, Units.val_one, Int.cast_one]
+      exact_mod_cast rfl
     case neg =>
       by_cases h : Even (orderOf a)
       case pos =>
-        have : sign (toPerm a : Perm (ZMod p)ˣ) = (-1) ^ ((p - 1)/(orderOf a)) :=
-          sign_eq_neg_pow_card ha ▸ totient_div_order_eq_cycleType_card ha ▸ rfl
-        have h_zmod :
-          ((legendreSym p (a.val.val : ℤ) : ℤ) : ZMod p) =
-          (((-1 : ℤ) ^ ((p - 1)/(orderOf a)) : ℤ) : ZMod p) := by
-            calc
-              ((legendreSym p (a.val.val : ℤ) : ℤ) : ZMod p) =
-              ((a.val.val : ℤ) : ZMod p) ^ ((p/2)) := by
-                exact_mod_cast legendreSym.eq_pow p (a.val.val : ℤ)
-              _ = (a.val : ZMod p) ^ ((p - 1)/2) := by
-                rw [eq_floor_div]
-                norm_num
-              _ = ((-1 : (ZMod p)ˣ).val : ZMod p) ^ ((p - 1)/(orderOf a)) := by
-                simpa [Units.val_pow_eq_pow_val] using
-                  congrArg Units.val (neg_one_pow_half_even_order h)
-              _ = (((-1 : ℤ) ^ ((p - 1)/(orderOf a)) : ℤ) : ZMod p) := by simp
-        rw [this, h_zmod]
-        exact_mod_cast rfl
+        calc
+          (legendreSym p a.val.val : ZMod p) = (a.val.val : ZMod p) ^ (((p - 1)/2)) := by
+            simpa [eq_floor_div] using legendreSym.eq_pow p a.val.val
+          _ = (((-1) ^ ((p - 1)/(orderOf a)) : ℤ) : ZMod p) := by
+            simpa [Units.val_pow_eq_pow_val] using
+              congrArg Units.val (neg_one_pow_half_even_order h)
+          _ = ((-1) ^ ((toPerm a : Perm (ZMod p)ˣ).cycleType.card) : ZMod p) := by
+            rw_mod_cast [← totient_div_order_eq_cycleType_card ha]
+          _ = sign (toPerm a) := by
+            rw [sign_eq_neg_pow_card ha]
+            exact_mod_cast rfl
       case neg =>
         have h : Odd (orderOf a) := Nat.not_even_iff_odd.mp h
-        have h1 :
-          ((legendreSym p (a.val.val : ℤ) : ℤ) : ZMod p) =
-          ((a.val.val : ℤ) : ZMod p) ^ ((p/2)) := by
-            exact_mod_cast legendreSym.eq_pow p (a.val.val : ℤ)
-        have h2 :
-          (a.val : ZMod p) ^ ((p - 1)/2) =
-          (a ^ (orderOf a)) ^ ((p - 1)/(2 * orderOf a)) := by
-            exact_mod_cast Eq.symm (pow_of_pow_of_odd_order h)
-        have odd_order_even_perm (ha : a ≠ 1) :
-          Odd (orderOf a) → sign (toPerm a : Perm (ZMod p)ˣ) = 1 :=
-            have : Odd (orderOf a) → Even ((p - 1)/(orderOf a)) := by
-              intro h
+        calc
+          legendreSym p a.val.val = (a.val.val : ZMod p) ^ (((p - 1)/2)) := by
+            rw [eq_floor_div]
+            exact_mod_cast legendreSym.eq_pow p a.val.val
+          _ = (a.val.val ^ (orderOf a)) ^ ((p - 1)/(2 * orderOf a)) := by
+            norm_num
+            rw_mod_cast [pow_of_pow_of_odd_order h]
+          _ = 1 := by
+            norm_num
+            rw_mod_cast [pow_orderOf_eq_one]
+            simp
+          _ = sign (toPerm a : Perm (ZMod p)ˣ) := by
+            rw [sign_eq_neg_pow_card ha, ← totient_div_order_eq_cycleType_card ha]
+            have : Even ((p - 1)/(orderOf a)) := by
               have : 2 ∣ (p - 1) :=
                 (even_iff_two_dvd.mp (Nat.Odd.sub_odd Fact.out odd_one))
               rw [even_iff_two_dvd] at *
@@ -256,18 +245,8 @@ lemma legendreSym_eq_sign_of_toPerm :
                   exact orderOf_dvd_card)
               rw [Nat.div_eq_of_eq_mul_right
                 (IsOfFinOrder.orderOf_pos fin_order_a) (by rw [hk])]
-              rcases (Nat.prime_two).dvd_mul.mp
-                (by rw [← hk] ; exact this) with (h2o | h2k)
+              rcases (Nat.prime_two).dvd_mul.mp (hk ▸ this) with (h2o | h2k)
               case inl => exact absurd h2o (Odd.not_two_dvd_nat h)
               case inr => exact h2k
-            fun h =>
-              sign_eq_neg_pow_card ha ▸
-              totient_div_order_eq_cycleType_card ha ▸
-              Even.neg_one_pow (this h)
-        rw [← eq_floor_div] at h1
-        rw [h1]
-        norm_num
-        rw [h2, ← Units.val_pow_eq_pow_val, pow_orderOf_eq_one]
-        simp only [Units.val_one, one_pow]
-        rw [odd_order_even_perm ha h]
-        exact_mod_cast rfl
+            rw [← Even.neg_one_pow this]
+            exact_mod_cast rfl
